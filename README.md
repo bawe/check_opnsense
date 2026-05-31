@@ -95,11 +95,21 @@ For further information have a look at the [opnsense documentation](https://docs
 ```
 
 ***Check wireguard tunnel status***
+
+Options:
+
+* `--carp-backup-ok` exits with OK if this node is a CARP backup. WireGuard tunnels are expected to be down on the passive node.
+
 ```shell
 ./check_opnsense.py -H <OPNSENSE_HOSTNAME> --api-key <API_KEY> --api-secret <API_SECRET>  -m wireguard
 [OK] 2/2 Wireguard peers are online
 [OK] Peer host1 is online (8.8.8.4:35376)
 [OK] Peer host2 is online (8.8.8.5:34376)
+```
+
+```shell
+./check_opnsense.py -H <OPNSENSE_HOSTNAME> --api-key <API_KEY> --api-secret <API_SECRET>  -m wireguard --carp-backup-ok
+[OK] Node is CARP backup. WireGuard is expected to be down.
 ```
 
 ***Check available disk space***

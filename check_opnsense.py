@@ -249,6 +249,16 @@ class CheckOPNsense:
                 "from the output or exit code calculation. Example: 'Disk 1, Disk 2'."
             ),
         )
+        check_opts.add_argument(
+            "--carp-backup-ok",
+            dest="carp_backup_ok",
+            action="store_true",
+            default=False,
+            help=(
+                "For wireguard mode: exit with OK if this node is a CARP backup. "
+                "WireGuard tunnels are expected to be down on the passive node."
+            ),
+        )
 
         options = p.parse_args()
 
@@ -404,8 +414,27 @@ class CheckOPNsense:
             for i in disabled_services:
                 self.check_message += f"[OK] Service {i} is disabled\n"
 
+    def get_carp_status(self) -> str:
+        """Query CARP VIP status. Returns 'MASTER', 'BACKUP', or 'UNKNOWN'."""
+        url = self.get_url("diagnostics/interface/get_vip_status")
+        data = self.request(url)
+        rows = data.get("rows", [])
+        if not rows:
+            return "UNKNOWN"
+        states = [row.get("status", row.get("state", "")).upper() for row in rows]
+        if all(s == "BACKUP" for s in states if s):
+            return "BACKUP"
+        if any(s == "MASTER" for s in states):
+            return "MASTER"
+        return "UNKNOWN"
+
     def check_wireguard(self) -> None:
         """Check WireGuard tunnel status."""
+        if self.options.carp_backup_ok and self.get_carp_status() == "BACKUP":
+            self.check_result = CheckState.OK
+            self.check_message = "Node is CARP backup. WireGuard is expected to be down."
+            return
+
         url = self.get_url("wireguard/service/show")
         data = self.request(url)
 
